@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>石巻すごろく</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <style>
+    body { text-align: center; font-family: sans-serif; }
+    #map { height: 80vh; width: 100%; margin-bottom: 10px; }
+    button { font-size: 20px; padding: 10px 20px; margin: 5px; }
+    .leaflet-popup-content { font-size: 16px; }
+    #log { max-height: 15vh; overflow-y: auto; text-align: left; padding: 5px; }
+  </style>
+</head>
+<body>
+  <h1>石巻すごろく</h1>
+  <div id="map"></div>
+  <button onclick="rollDice()">🎲 サイコロを振る</button>
+  <div id="log">ゲーム開始！</div>
+
+  <script>
+    const map = L.map('map').setView([38.4345, 141.3023], 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    const places = [
+      { name: "石巻駅", coords: [38.4345, 141.3023], info: "石巻市の玄関口", img: "images/ishinomaki_station.jpg" },
+      { name: "立町商店街", coords: [38.4355, 141.3030], info: "地元グルメが楽しめる", img: "" },
+      { name: "石ノ森萬画館", coords: [38.4362, 141.3071], info: "漫画文化の博物館", img: "images/mangakan.jpg" },
+      { name: "北上川", coords: [38.4430, 141.3100], info: "市を流れる大河", img: "" },
+      { name: "サン・ファン館", coords: [38.3716, 141.5056], info: "復元帆船サン・ファン号", img: "" },
+      { name: "金華山", coords: [38.3008, 141.5985], info: "黄金山神社がある霊峰", img: "images/kinka.jpg" },
+      { name: "牡鹿半島", coords: [38.2744, 141.4975], info: "自然豊かな半島", img: "" },
+      { name: "網地島", coords: [38.2905, 141.4644], info: "小さな離島", img: "" },
+      { name: "漁港・市場", coords: [38.4290, 141.3065], info: "新鮮な海の幸", img: "" },
+      { name: "復興祈念公園", coords: [38.4317, 141.3120], info: "震災の記憶を未来へ", img: "" }
+    ];
+
+    places.forEach(p => {
+      L.marker(p.coords).addTo(map).bindPopup(`<b>${p.name}</b><br>${p.info}`);
+    });
+
+    let players = [
+      { name: "あなた", pos: 0, marker: null },
+      { name: "CPU1", pos: 0, marker: null },
+      { name: "CPU2", pos: 0, marker: null },
+      { name: "CPU3", pos: 0, marker: null }
+    ];
+
+    const icon = L.icon({ iconUrl: "pawn.png", iconSize: [32,32] });
+    players.forEach(p => {
+      p.marker = L.marker(places[0].coords, {icon: icon}).addTo(map);
+    });
+
+    let turn = 0;
+    let finished = false;
+
+    function rollDice() {
+      if (finished) return;
+      if (turn !== 0) { log("あなたの番ではありません"); return; }
+      let dice = Math.floor(Math.random() * 6) + 1;
+      movePlayer(0, dice, () => cpuTurn(1));
+    }
+
+    function movePlayer(i, dice, callback) {
+      let p = players[i];
+      p.pos += dice;
+      if (p.pos >= places.length-1) {
+        p.pos = places.length-1;
+        finished = true;
+        log(`🏁 ${p.name} がゴールしました！`);
+      }
+      let dest = places[p.pos];
+      p.marker.setLatLng(dest.coords);
+      let imgHtml = dest.img ? `<br><img src="${dest.img}" width="150">` : "";
+      p.marker.bindPopup(`<b>${dest.name}</b><br>${dest.info}${imgHtml}`).openPopup();
+      log(`${p.name} 🎲 ${dice} → ${dest.name}`);
+      setTimeout(callback, 1500);
+    }
+
+    function cpuTurn(i) {
+      if (finished) return;
+      if (i > 3) { turn = 0; log("👉 あなたの番です"); return; }
+      let dice = Math.floor(Math.random() * 6) + 1;
+      movePlayer(i, dice, () => cpuTurn(i+1));
+    }
+
+    function log(msg) {
+      document.getElementById("log").innerHTML += "<br>" + msg;
+    }
+  </script>
+</body>
+</html>
